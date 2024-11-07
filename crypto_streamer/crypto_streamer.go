@@ -1,10 +1,14 @@
 package crypto_streamer
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
+
+	m "triangular_arbitrage_bot/models"
 
 	gbub "github.com/monkeymatt0/go-binance-url-builder"
 
@@ -30,6 +34,11 @@ during creation phase which type of streamer this should be if a buy streamer or
 type CryptoStreamer struct {
 	Testing       bool
 	SymbolChannel string
+	depthUpdate   m.StreamDepthModel
+	buyPrice      float64
+	buyQty        float64
+	sellPrice     float64
+	sellQty       float64
 }
 
 func (cs *CryptoStreamer) Listen(dataCh chan string) {
@@ -53,6 +62,21 @@ func (cs *CryptoStreamer) Listen(dataCh chan string) {
 			log.Fatal("Error while reading: ", err)
 			return
 		}
-		dataCh <- fmt.Sprintf("°°°°°°°°°°°°°°°°°%s\n Received: %s\n", cs.SymbolChannel, message)
+		if err := json.Unmarshal(message, &cs.depthUpdate); err != nil {
+			log.Println(err)
+		}
+		if cs.buyPrice, err = strconv.ParseFloat(cs.depthUpdate.Asks[0][0], 64); err != nil {
+			log.Println(err)
+		}
+		if cs.buyQty, err = strconv.ParseFloat(cs.depthUpdate.Asks[0][1], 64); err != nil {
+			log.Println(err)
+		}
+		if cs.sellPrice, err = strconv.ParseFloat(cs.depthUpdate.Bids[0][0], 64); err != nil {
+			log.Println(err)
+		}
+		if cs.sellQty, err = strconv.ParseFloat(cs.depthUpdate.Bids[0][1], 64); err != nil {
+			log.Println(err)
+		}
+		dataCh <- fmt.Sprintf("++++++++++++++++++++++++++++++\n%s\n------------------------------\nbuyPrice: %f - Quantity: %f\nsellPrice: %f - Quantity: %f\n++++++++++++++++++++++++++++++\n", cs.SymbolChannel, cs.buyPrice, cs.buyQty, cs.sellPrice, cs.sellQty)
 	}
 }
