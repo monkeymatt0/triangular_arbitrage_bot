@@ -8,17 +8,29 @@ import (
 )
 
 func main() {
-	channels := []string{gbub.BTCUSDT, gbub.ETHBTC, gbub.ETHUSDT}
+	channelSymbols := []string{gbub.BTCUSDT, gbub.ETHBTC, gbub.ETHUSDT}
 	streamers := &cs.CryptoStreamers{}
-	streamers.New(channels, true)
+	streamers.New(channelSymbols, true)
 
-	dataCh := make(chan string)
+	dataChs := make([]chan string, 3)
 
-	go streamers.Streams[0].Listen(dataCh)
-	go streamers.Streams[1].Listen(dataCh)
-	go streamers.Streams[2].Listen(dataCh)
+	// Memory allocation for the channels
+	for i := 0; i < len(dataChs); i++ {
+		dataChs[i] = make(chan string)
+	}
 
-	for data := range dataCh {
-		fmt.Println(data)
+	go streamers.Streams[cs.BTCUSDT].Listen(dataChs[cs.BTCUSDT])
+	go streamers.Streams[cs.ETHBTC].Listen(dataChs[cs.ETHBTC])
+	go streamers.Streams[cs.ETHUSDT].Listen(dataChs[cs.ETHUSDT])
+
+	for {
+		select {
+		case btcUsdtData := <-dataChs[cs.BTCUSDT]:
+			fmt.Println(btcUsdtData)
+		case ethBtcData := <-dataChs[cs.ETHBTC]:
+			fmt.Println(ethBtcData)
+		case ethUsdtData := <-dataChs[cs.ETHUSDT]:
+			fmt.Println(ethUsdtData)
+		}
 	}
 }
