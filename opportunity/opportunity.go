@@ -16,8 +16,11 @@ import (
 // We will use the above coins as reference
 type Opportunity struct {
 	FirstCoinPrice  float64 // This will be the price of BTC in USDT
+	FirstCoinQty    float64 // This will be the quantity of BTC in USDT
 	SecondCoinPrice float64 // This will be the price of ETH in BTC
+	SecondCoinQty   float64 // This will be the quantity of ETH in BTC
 	ThirdCoinPrice  float64 // This will be the price of ETH in USDT
+	ThirdCoinQty    float64 // This will be the quantity of ETH in USDT
 
 	// Since we are interacting with an exchange we need also to consider
 	// the fees that the exange takes when executing an order.
