@@ -14,10 +14,11 @@ func main() {
 
 	dataCh := make(chan string)
 
-	go streamers.Streams[0].Listen(dataCh)
-	go streamers.Streams[1].Listen(dataCh)
-	go streamers.Streams[2].Listen(dataCh)
+	go streamers.Streams[cs.BTCUSDT].Listen(dataCh)
+	go streamers.Streams[cs.ETHBTC].Listen(dataCh)
+	go streamers.Streams[cs.ETHUSDT].Listen(dataCh)
 
+	// @todo : Parallelize the channels so that I don't have bottleneck on a single channel
 	for data := range dataCh {
 		fmt.Println(data)
 	}
