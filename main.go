@@ -16,13 +16,13 @@ func main() {
 	streamers := &cs.CryptoStreamers{}
 	streamers.New(channelSymbols, true)
 	opportunityChecker := &o.Opportunity{}
+	opportunityChecker.New() // This will set the fee
 	// Set price and check for the opportunity, you may need to update the structure, you need to check for liquidity
 	// @todo : create a structure that needs to have :
 	// price float64
 	// quantity float64
 	// @todo : adapt channel sending to send only price and quantity (CryptoStreamer)
 	// @todo : update CryptoStreamer to be a buy or sell streamer (CryptoStreamer)
-	// @todo : adapt opportunity to check also fo quantity (Opportunity)
 
 	dataChs := make([]chan string, 3)
 	receivedData := make([]bool, 3)
