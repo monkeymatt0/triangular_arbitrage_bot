@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	cs "triangular_arbitrage_bot/crypto_streamer"
+	m "triangular_arbitrage_bot/models"
 	o "triangular_arbitrage_bot/opportunity"
 
 	gbub "github.com/monkeymatt0/go-binance-url-builder"
@@ -14,22 +15,17 @@ import (
 func main() {
 	channelSymbols := []string{gbub.BTCUSDT, gbub.ETHBTC, gbub.ETHUSDT}
 	streamers := &cs.CryptoStreamers{}
-	streamers.New(channelSymbols, true)
+	sides := []cs.OrderSide{cs.BUY, cs.BUY, cs.SELL}
+	streamers.New(channelSymbols, sides, true)
 	opportunityChecker := &o.Opportunity{}
 	opportunityChecker.New() // This will set the fee
-	// Set price and check for the opportunity, you may need to update the structure, you need to check for liquidity
-	// @todo : create a structure that needs to have :
-	// price float64
-	// quantity float64
-	// @todo : adapt channel sending to send only price and quantity (CryptoStreamer)
-	// @todo : update CryptoStreamer to be a buy or sell streamer (CryptoStreamer)
 
-	dataChs := make([]chan string, 3)
+	dataChs := make([]chan m.ChannelData, 3)
 	receivedData := make([]bool, 3)
 	fmt.Println(receivedData)
 	// Memory allocation for the channels
 	for i := 0; i < len(dataChs); i++ {
-		dataChs[i] = make(chan string)
+		dataChs[i] = make(chan m.ChannelData)
 	}
 
 	go streamers.Streams[cs.BTCUSDT].Listen(dataChs[cs.BTCUSDT])
@@ -39,13 +35,13 @@ func main() {
 	for {
 		// @todo : whenever I receive a signal I should
 		select {
-		case btcUsdtData := <-dataChs[cs.BTCUSDT]:
-			receivedData[cs.BTCUSDT] = true
-			fmt.Println(btcUsdtData)
 		case ethBtcData := <-dataChs[cs.ETHBTC]:
 			fmt.Println(ethBtcData)
 		case ethUsdtData := <-dataChs[cs.ETHUSDT]:
 			fmt.Println(ethUsdtData)
+		case btcUsdtData := <-dataChs[cs.BTCUSDT]:
+			receivedData[cs.BTCUSDT] = true
+			fmt.Println(btcUsdtData)
 		}
 
 		if receivedData[cs.BTCUSDT] && receivedData[cs.ETHBTC] && receivedData[cs.ETHUSDT] {
