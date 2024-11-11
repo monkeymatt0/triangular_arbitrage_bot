@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	cs "triangular_arbitrage_bot/crypto_streamer"
 	m "triangular_arbitrage_bot/models"
 	o "triangular_arbitrage_bot/opportunity"
@@ -21,8 +22,7 @@ func main() {
 	opportunityChecker.New() // This will set the fee
 
 	dataChs := make([]chan m.ChannelData, 3)
-	receivedData := make([]bool, 3)
-	fmt.Println(receivedData)
+	// receivedData := make([]bool, 3)
 	// Memory allocation for the channels
 	for i := 0; i < len(dataChs); i++ {
 		dataChs[i] = make(chan m.ChannelData)
@@ -32,27 +32,61 @@ func main() {
 	go streamers.Streams[cs.ETHBTC].Listen(dataChs[cs.ETHBTC])
 	go streamers.Streams[cs.ETHUSDT].Listen(dataChs[cs.ETHUSDT])
 
-	for {
-		// @todo : whenever I receive a signal I should
-		select {
-		case ethBtcData := <-dataChs[cs.ETHBTC]:
-			fmt.Println(ethBtcData)
-		case ethUsdtData := <-dataChs[cs.ETHUSDT]:
-			fmt.Println(ethUsdtData)
-		case btcUsdtData := <-dataChs[cs.BTCUSDT]:
-			receivedData[cs.BTCUSDT] = true
-			fmt.Println(btcUsdtData)
-		}
+	btcUsdtPrevPrice := 0.0
+	ethBtcPrevPrice := 0.0
+	ethUsdtPrevPrice := 0.0
 
-		if receivedData[cs.BTCUSDT] && receivedData[cs.ETHBTC] && receivedData[cs.ETHUSDT] {
-			isPorfitable, err := opportunityChecker.IsProfitable(1000) // @remind : This is mocked and need to be replaced with correct values
+	opportunityChecker.FirstCoinPrice = btcUsdtPrevPrice
+	opportunityChecker.SecondCoinPrice = ethBtcPrevPrice
+	opportunityChecker.ThirdCoinPrice = ethUsdtPrevPrice
+
+	timeout := 100 * time.Millisecond // 0.2 seconds
+	for {
+		fmt.Println(time.Now())
+		if opportunityChecker.FirstCoinPrice != 0.0 && opportunityChecker.SecondCoinPrice != 0.0 && opportunityChecker.ThirdCoinPrice != 0.0 {
+			fmt.Println("******************* RECEIVED ALL *******************")
+			isPorfitable, err := opportunityChecker.IsProfitable(100)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			if isPorfitable {
-				// @todo : Place the orders in order to execute them in a triangular way
+				fmt.Println("#################### Profitable ####################")
+				continue
 			}
+			fmt.Println("#################### Not Good ####################")
 		}
+		select {
+		case ethBtcData := <-dataChs[cs.ETHBTC]:
+			if ethBtcPrevPrice == 0.0 || ethBtcPrevPrice != opportunityChecker.SecondCoinPrice {
+				ethBtcPrevPrice = ethBtcData.Price
+			} else {
+				fmt.Println("ethBtc same")
+			}
+			opportunityChecker.SecondCoinPrice = ethBtcData.Price
+			opportunityChecker.SecondCoinQty = ethBtcData.Quantity
+			fmt.Println(ethBtcData)
+		case btcUsdtData := <-dataChs[cs.BTCUSDT]:
+			if btcUsdtPrevPrice == 0.0 || btcUsdtPrevPrice != opportunityChecker.FirstCoinPrice {
+				btcUsdtPrevPrice = btcUsdtData.Price
+			} else {
+				fmt.Println("btcUsdt same")
+			}
+			opportunityChecker.FirstCoinPrice = btcUsdtData.Price
+			opportunityChecker.FirstCoinQty = btcUsdtData.Quantity
+			fmt.Println(btcUsdtData)
+		case ethUsdtData := <-dataChs[cs.ETHUSDT]:
+			if ethUsdtPrevPrice == 0.0 || ethUsdtPrevPrice != opportunityChecker.ThirdCoinPrice {
+				ethUsdtPrevPrice = ethUsdtData.Price
+			} else {
+				fmt.Println("ethUsdt same")
+			}
+			opportunityChecker.ThirdCoinPrice = ethUsdtData.Price
+			opportunityChecker.ThirdCoinQty = ethUsdtData.Quantity
+			fmt.Println(ethUsdtData)
+		case <-time.After(timeout):
+			fmt.Println("Timeout, skipping this cycle")
+		}
+
 	}
 }
